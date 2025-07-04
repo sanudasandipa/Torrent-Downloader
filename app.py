@@ -26,8 +26,50 @@ download_dir = os.path.join(os.getcwd(), 'downloads')
 # Create downloads directory if it doesn't exist
 os.makedirs(download_dir, exist_ok=True)
 
-# Configure session
+# Configure session with optimized settings for cloud deployment
 session.listen_on(6881, 6891)
+
+# Apply high-performance settings for better speeds
+settings = lt.session_settings()
+
+# Connection settings
+settings.connections_limit = 500
+settings.connections_limit_per_torrent = 100
+settings.max_failcount = 3
+settings.max_peer_recv_buffer_size = 1024 * 1024  # 1MB
+settings.max_peer_send_buffer_size = 1024 * 1024  # 1MB
+
+# Upload/Download rate limits (0 = unlimited, adjust as needed)
+settings.download_rate_limit = 0  # Unlimited download
+settings.upload_rate_limit = 0    # Unlimited upload (be careful with this)
+
+# DHT and peer exchange settings
+settings.enable_dht = True
+settings.enable_lsd = True  # Local Service Discovery
+settings.enable_upnp = False  # Disable UPnP on cloud servers
+settings.enable_natpmp = False  # Disable NAT-PMP on cloud servers
+
+# Choking algorithm (for better performance)
+settings.choking_algorithm = lt.choking_algorithm_t.rate_based_choker
+
+# Disk cache settings
+settings.cache_size = 512  # 512 MB cache
+settings.cache_expiry = 60
+
+# Tracker settings
+settings.tracker_completion_timeout = 30
+settings.tracker_receive_timeout = 10
+settings.stop_tracker_timeout = 5
+settings.announce_to_all_trackers = True
+settings.announce_to_all_tiers = True
+
+# Apply settings
+session.set_settings(settings)
+
+# Add DHT router nodes for better peer discovery
+session.add_dht_router("router.bittorrent.com", 6881)
+session.add_dht_router("dht.transmissionbt.com", 6881)
+session.add_dht_router("router.utorrent.com", 6881)
 
 def get_storage_info():
     """Get storage information for the downloads directory"""

@@ -6,12 +6,19 @@ services:
     container_name: torrent-downloader
     ports:
       - "80:80"
+      - "6881-6891:6881-6891/tcp"
+      - "6881-6891:6881-6891/udp"
     volumes:
       - ./downloads:/app/downloads
       - torrent_data:/app/data
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2'
     networks:
       - torrent-network
 
