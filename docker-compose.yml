@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  torrent-downloader:
+    build: .
+    container_name: torrent-downloader
+    ports:
+      - "80:80"
+    volumes:
+      - ./downloads:/app/downloads
+      - torrent_data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    networks:
+      - torrent-network
+
+volumes:
+  torrent_data:
+
+networks:
+  torrent-network:
+    driver: bridge
