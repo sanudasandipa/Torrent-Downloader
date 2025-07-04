@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ZIP Download Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .button { 
+            padding: 10px 20px; 
+            margin: 10px; 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+        }
+        .button:hover { background: #0056b3; }
+        .log { 
+            background: #f8f9fa; 
+            border: 1px solid #ddd; 
+            padding: 10px; 
+            margin: 10px 0; 
+            max-height: 300px; 
+            overflow-y: auto; 
+        }
+    </style>
+</head>
+<body>
+    <h1>ZIP Download Functionality Test</h1>
+    
+    <h2>Test Folder Download</h2>
+    <button class="button" onclick="testFolderDownload()">Download test-folder as ZIP</button>
+    <button class="button" onclick="testLargeFolderDownload()">Download Ballerina folder as ZIP</button>
+    
+    <h2>Test Selected Files Download</h2>
+    <button class="button" onclick="testSelectedFiles()">Download Selected Files as ZIP</button>
+    
+    <h2>Log</h2>
+    <div id="log" class="log"></div>
+    
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        async function downloadBlob(response, defaultFilename) {
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                
+                // Get filename from response headers
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = defaultFilename;
+                if (contentDisposition) {
+                    const matches = /filename[^;=\n]*=((['"]).*?\\2|[^;\\n]*)/.exec(contentDisposition);
+                    if (matches != null && matches[1]) {
+                        filename = matches[1].replace(/['"]/g, '');
+                    }
+                }
+                
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                log(`✅ Downloaded: ${filename} (${blob.size} bytes)`);
+                return true;
+            } else {
+                const text = await response.text();
+                log(`❌ Download failed: ${response.status} - ${text}`);
+                return false;
+            }
+        }
+        
+        async function testFolderDownload() {
+            log('📁 Testing folder download: test-folder');
+            try {
+                const response = await fetch('/api/folder/download/test-folder');
+                await downloadBlob(response, 'test-folder.zip');
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+            }
+        }
+        
+        async function testLargeFolderDownload() {
+            const folderName = 'Ballerina (2025) [1080p] [WEBRip] [x265] [10bit] [5.1] [YTS.MX]';
+            log(`📁 Testing large folder download: ${folderName}`);
+            try {
+                const response = await fetch(`/api/folder/download/${encodeURIComponent(folderName)}`);
+                await downloadBlob(response, 'ballerina.zip');
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+            }
+        }
+        
+        async function testSelectedFiles() {
+            log('📄 Testing selected files download');
+            try {
+                // First, get the list of files
+                const filesResponse = await fetch('/api/files');
+                if (!filesResponse.ok) {
+                    log('❌ Failed to get files list');
+                    return;
+                }
+                
+                const filesData = await filesResponse.json();
+                if (!filesData.success) {
+                    log(`❌ Files API error: ${filesData.message}`);
+                    return;
+                }
+                
+                // Select test files
+                const testFiles = filesData.files.filter(f => f.folder === 'test-folder');
+                if (testFiles.length === 0) {
+                    log('❌ No test files found');
+                    return;
+                }
+                
+                const selectedFiles = testFiles.map(f => f.path);
+                log(`📋 Selected ${selectedFiles.length} files: ${selectedFiles.join(', ')}`);
+                
+                // Download selected files
+                const response = await fetch('/api/files/download/selected', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        files: selectedFiles
+                    })
+                });
+                
+                await downloadBlob(response, 'selected_files.zip');
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+            }
+        }
+        
+        // Initial log
+        log('🔧 ZIP Download Test Page Ready');
+    </script>
+</body>
+</html>
